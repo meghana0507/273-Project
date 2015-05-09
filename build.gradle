@@ -1,0 +1,36 @@
+buildscript {
+    repositories {
+        maven { url "http://repo.spring.io/release" }
+        mavenCentral()
+        mavenLocal()
+    }
+    dependencies {
+        classpath("org.springframework.boot:spring-boot-gradle-plugin:1.1.6.RELEASE")
+    }
+}
+
+apply plugin: 'java'
+apply plugin: 'idea'
+apply plugin: 'spring-boot'
+
+
+bootRepackage {
+    mainClass = 'facebook.fbapp'
+}
+
+repositories {
+    mavenCentral()
+    maven { url "http://repo.spring.io/release" }
+}
+
+dependencies {
+    compile("org.springframework.boot:spring-boot-starter-web:1.2.1.RELEASE")
+    testCompile("org.springframework.boot:spring-boot-starter-test")
+    compile("org.webjars:bootstrap:3.1.1")
+    compile("com.restfb:restfb:1.9.0")
+    testCompile("junit:junit")
+}
+
+task wrapper(type: Wrapper) {
+    gradleVersion = '2.1'
+}
