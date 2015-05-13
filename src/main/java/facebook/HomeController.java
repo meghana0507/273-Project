@@ -1,5 +1,7 @@
 package facebook;
 
+import DatabaseStorage.PhotoRepo;
+import DatabaseStorage.PostRepo;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.restfb.DefaultFacebookClient;
@@ -47,6 +49,13 @@ public class HomeController {
     public HomeController() {
         this.FacebookScribeAuthenticator(clientId, clientSecret, applicationHost);
     }
+
+    //Mongo Repo
+    @Autowired
+    private PhotoRepo photoRepo;
+    @Autowired
+    private PostRepo postRepo;
+
 
     //Initial Login Page
     @RequestMapping("/login/facebook")
@@ -200,12 +209,18 @@ public class HomeController {
 
         object.setPhotos(myPhotos);
 
-
+        photoRepo.save(object);
         return object;
     }
 
     //================================================================
     //                      API for Posts
     //================================================================
+    @RequestMapping(value = "{user-id}/photos", method = RequestMethod.GET)
+    @ResponseStatus(HttpStatus.OK)
+    public
+    @ResponseBody
+    UserPhotos getPhotos(@PathVariable("user-id") String id) throws JsonProcessingException {
 
+    }
 }

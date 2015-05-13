@@ -22,16 +22,6 @@ public class PostAttributes {
     private List<PersonInfo> nameLikes;
     private List<PersonInfo> nameTags;
 
-//    private int numberOfComments
-//    private List<Comment> comments;
-
-//    public String getPhotoUrl(){
-    //      return photoUrl;
-    ///}
-
-    //public void setPhotoUrl(String url){
-    //  this.photoUrl = url;
-    //}
     public String getType(){
         return type;
     }
