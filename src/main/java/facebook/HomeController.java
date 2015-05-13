@@ -214,4 +214,286 @@ public class HomeController {
     UserPhotos getPhotos(@PathVariable("user-id") String id) throws JsonProcessingException {
 
     }
+	
+	
+	
+	private HashMap<String, Long> scoreList = new HashMap<String, Long>();
+    private TopFriendsService service;
+
+    @Autowired
+    Controller(TopFriendsService service){
+        this.service = service;
+    }
+
+    // ------------------------------------------------------------------
+    //                      API for TOP FRIENDS
+    // ------------------------------------------------------------------
+    @RequestMapping(value = "/{user-id}/topfriends", method = RequestMethod.GET)
+    @ResponseStatus(HttpStatus.OK)
+    public @ResponseBody TopFriendsList getTopFriends(@PathVariable("user-id") String id) {
+        scoreList.clear();
+        long scoreCounter;
+        FacebookClient fbClient = new DefaultFacebookClient(accessToken, Version.VERSION_2_2);
+        User me;
+        me = fbClient.fetchObject(id, com.restfb.types.User.class);
+        PersonInfo object = new PersonInfo();
+        object.setName(me.getName());
+        object.setId(me.getId());
+
+
+        JsonObject postConnection = fbClient.fetchObject("me/posts", JsonObject.class);
+       JsonObject photosConnection = fbClient.fetchObject("me/photos", JsonObject.class);
+
+        int postSize = postConnection.getJsonArray("data").length();
+        int photoSize = photosConnection.getJsonArray("data").length();
+
+        // ------------------------------------------------------------------
+        //                              POSTS
+        // ------------------------------------------------------------------
+
+        for (int i = 0; i < postSize; i++) {
+            PostAttributes obj = new PostAttributes();
+            List<PersonInfo> nameLikes = new ArrayList<PersonInfo>();
+            List<PersonInfo> nameComments = new ArrayList<PersonInfo>();
+            List<PersonInfo> nameTags = new ArrayList<PersonInfo>();
+             Set<PersonInfo> hs = new HashSet<>();
+
+            //-------LIKES--------//
+            if (postConnection.getJsonArray("data").getJsonObject(i).has("likes")) {
+
+                JsonArray nameLikesJson = postConnection.getJsonArray("data").getJsonObject(i).getJsonObject("likes").getJsonArray("data");
+                for (int n = 0; n < nameLikesJson.length(); n++) {
+                    PersonInfo person = new PersonInfo();
+                    String temp1 = nameLikesJson.getJsonObject(n).getString("name");
+                    String temp2 = nameLikesJson.getJsonObject(n).getString("id");
+                    person.setId(temp2);
+                    person.setName(temp1);
+                    nameLikes.add(person);
+                }
+            }
+
+
+            for(PersonInfo personInfo: nameLikes){
+                if(scoreList.containsKey(personInfo.getName())){
+                    long x = scoreList.get(personInfo.getName());
+                    x++;
+                    scoreList.put(personInfo.getName(), x);
+                }
+                else {
+                    scoreCounter = 0;
+                    scoreCounter++;
+                    scoreList.put(personInfo.getName(), scoreCounter);
+                }
+            }
+
+
+
+            //----------------COMMENTS-------------//
+            if (postConnection.getJsonArray("data").getJsonObject(i).has("comments")) {
+
+                JsonArray nameCommentsJson = postConnection.getJsonArray("data").getJsonObject(i).getJsonObject("comments").getJsonArray("data");
+                for (int c = 0; c < nameCommentsJson.length(); c++) {
+                    JsonObject fromCommentsJson = nameCommentsJson.getJsonObject(c).getJsonObject("from");
+                    String temp3 = fromCommentsJson.getString("name");
+                    String temp4 = fromCommentsJson.getString("id");
+                    PersonInfo person = new PersonInfo();
+                    person.setId(temp4);
+                    person.setName(temp3);
+                    nameComments.add(person);
+                }
+                hs.addAll(nameComments);
+                nameComments.clear();
+                nameComments.addAll(hs);
+            }
+
+            for(PersonInfo personInfo: nameComments){
+                if(scoreList.containsKey(personInfo.getName())){
+                    long x = scoreList.get(personInfo.getName());
+                    x+=5;
+                    scoreList.put(personInfo.getName(), x);
+                }
+                else
+                {
+                    scoreCounter = 0;
+                    scoreCounter += 5;
+                    scoreList.put(personInfo.getName(), scoreCounter);
+                }
+            }
+
+
+            //---------TAGS-----------//
+            if (postConnection.getJsonArray("data").getJsonObject(i).has("tags")) {
+
+                JsonArray nameTagsJson = postConnection.getJsonArray("data").getJsonObject(i).getJsonObject("tags").getJsonArray("data");
+                int k = 0;
+                for (int c = 0; c < nameTagsJson.length(); c++) {
+                    String temp5 = nameTagsJson.getJsonObject(c).getString("name");
+                    String temp6 = nameTagsJson.getJsonObject(c).getString("id");
+                    PersonInfo person = new PersonInfo();
+                    person.setId(temp6);
+                    person.setName(temp5);
+                    nameTags.add(person);
+                    k++;
+                }
+                obj.setNumberOfTags(k);
+            }
+
+            if(obj.getNumberOfTags() < 5) {
+                for (PersonInfo personInfo : nameTags) {
+                    if(scoreList.containsKey(personInfo.getName())){
+                        long x = scoreList.get(personInfo.getName());
+                        x+=10;
+                        scoreList.put(personInfo.getName(), x);
+                    }
+                    else
+                    {
+                        scoreCounter = 0;
+                        scoreCounter += 10;
+                        scoreList.put(personInfo.getName(), scoreCounter);
+                    }
+                }
+            }
+        }
+
+
+        // ------------------------------------------------------------------
+        //                              PHOTOS
+        // ------------------------------------------------------------------
+
+        for (int i = 0; i < photoSize; i++) {
+
+            PhotoAttributes obj = new PhotoAttributes();
+            List<PersonInfo> nameLikes = new ArrayList<PersonInfo>();
+            List<PersonInfo> nameComments = new ArrayList<PersonInfo>();
+            Set<PersonInfo> hs = new HashSet<>();
+            List<PersonInfo> nameTags = new ArrayList<PersonInfo>();
+            List<PersonInfo> photoOwner = new ArrayList<PersonInfo>();
+
+            //-------LIKES--------//
+            if (photosConnection.getJsonArray("data").getJsonObject(i).has("likes")) {
+                JsonArray nameLikesJson = photosConnection.getJsonArray("data").getJsonObject(i).getJsonObject("likes").getJsonArray("data");
+                for (int n = 0; n < nameLikesJson.length(); n++) {
+                    PersonInfo person = new PersonInfo();
+                    String temp1 = nameLikesJson.getJsonObject(n).getString("name");
+                    String temp2 = nameLikesJson.getJsonObject(n).getString("id");
+                    person.setId(temp2);
+                    person.setName(temp1);
+                    nameLikes.add(person);
+                }
+            }
+
+            for(PersonInfo personInfo: nameLikes){
+                if(scoreList.containsKey(personInfo.getName())){
+                    long x = scoreList.get(personInfo.getName());
+                    x++;
+                    scoreList.put(personInfo.getName(), x);
+                }
+                else {
+                    scoreCounter = 0;
+                    scoreCounter++;
+                    scoreList.put(personInfo.getName(), scoreCounter);
+                }
+            }
+
+            //----------------COMMENTS-------------//
+            if (photosConnection.getJsonArray("data").getJsonObject(i).has("comments")) {
+
+                JsonArray nameCommentsJson = photosConnection.getJsonArray("data").getJsonObject(i).getJsonObject("comments").getJsonArray("data");
+                for (int c = 0; c < nameCommentsJson.length(); c++) {
+                    JsonObject fromCommentsJson = nameCommentsJson.getJsonObject(c).getJsonObject("from");
+                    String temp3 = fromCommentsJson.getString("name");
+                    String temp4 = fromCommentsJson.getString("id");
+                    PersonInfo person = new PersonInfo();
+                    person.setId(temp4);
+                    person.setName(temp3);
+                    nameComments.add(person);
+                 }
+
+                hs.addAll(nameComments);
+                nameComments.clear();
+                nameComments.addAll(hs);
+            }
+
+            for(PersonInfo personInfo: nameComments){
+                if(scoreList.containsKey(personInfo.getName())){
+                    long x = scoreList.get(personInfo.getName());
+                    x++;
+                    scoreList.put(personInfo.getName(), x);
+                }
+                else
+                {
+                    scoreCounter = 0;
+                    scoreCounter++;
+                    scoreList.put(personInfo.getName(), scoreCounter);
+                }
+            }
+
+            //---------TAGS-----------//
+            if (photosConnection.getJsonArray("data").getJsonObject(i).has("tags")) {
+                JsonArray nameTagsJson = photosConnection.getJsonArray("data").getJsonObject(i).getJsonObject("tags").getJsonArray("data");
+                int k = 0;
+
+                for (int c = 0; c < nameTagsJson.length(); c++) {
+                    String temp6 =" ";
+                    if(nameTagsJson.getJsonObject(c).has("id")) {
+                        temp6 = nameTagsJson.getJsonObject(c).getString("id");
+                    }
+
+                    String temp5 = nameTagsJson.getJsonObject(c).getString("name");
+
+                    PersonInfo person = new PersonInfo();
+                    person.setId(temp6);
+                    person.setName(temp5);
+                    nameTags.add(person);
+                    k++;
+                }
+                obj.setNumberOfTags(k);
+            }
+
+            if(obj.getNumberOfTags() < 4) {
+                for (PersonInfo personInfo : nameTags) {
+                    if(scoreList.containsKey(personInfo.getName())){
+                        long x = scoreList.get(personInfo.getName());
+                        x++;
+                        scoreList.put(personInfo.getName(), x);
+                    }
+                    else
+                    {
+                        scoreCounter = 0;
+                        scoreCounter++;
+                        scoreList.put(personInfo.getName(), scoreCounter);
+                    }
+                }
+            }
+
+            //-------------PhotoOwner------------//
+            JsonObject photoOwnerJson = photosConnection.getJsonArray("data").getJsonObject(i).getJsonObject("from");
+            String temp7 = photoOwnerJson.getString("name");
+            String temp8 = photoOwnerJson.getString("id")  ;
+            PersonInfo person = new PersonInfo();
+            person.setId(temp8);
+            person.setName(temp7);
+            photoOwner.add(person);
+
+            if(scoreList.containsKey(person.getName())){
+                long x = scoreList.get(person.getName());
+                x++;
+                scoreList.put(person.getName(), x);
+            }
+            else
+            {
+                scoreCounter = 0;
+                scoreCounter++;
+                scoreList.put(person.getName(), scoreCounter);
+            }
+        }
+        scoreList.remove(object.getName());
+        sortedScores ob = new sortedScores(scoreList);
+        List li = ob.sortByValues(scoreList);
+		TopFriendsList tf = new TopFriendsList();
+        tf.setFriendsList(li);
+        return service.create(tf);
+    }
+	
+	
 }
