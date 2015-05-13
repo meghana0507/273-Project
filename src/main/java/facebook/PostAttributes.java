@@ -5,10 +5,6 @@ import com.restfb.types.Event;
 import java.security.acl.Owner;
 import java.util.List;
 
-/**
- * Created by Deep Trivedi on 4/25/2015.
- */
-
 public class PostAttributes {
 
     //add variables about photos

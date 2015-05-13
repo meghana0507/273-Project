@@ -2,10 +2,6 @@ package facebook;
 
 import java.util.ArrayList;
 
-/**
- * Created by Deep Trivedi on 4/25/2015.
- */
-
 public class UserPosts {
     private String name;
     private String id;

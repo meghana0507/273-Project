@@ -212,6 +212,107 @@ public class HomeController {
     public
     @ResponseBody
     UserPhotos getPhotos(@PathVariable("user-id") String id) throws JsonProcessingException {
+		User me;
+        me = fbClient.fetchObject(id, com.restfb.types.User.class);
+        UserPosts object = new UserPosts();
+
+        //set name and id
+        object.setName(me.getName());
+        object.setId(me.getId());
+
+
+        JsonObject postConnection = fbClient.fetchObject("me/posts", JsonObject.class);
+        ArrayList<PostAttributes> myPosts = new ArrayList<PostAttributes>();
+        int size = postConnection.getJsonArray("data").length();
+
+        for (int i = 0; i < size; i++) {
+            PostAttributes obj = new PostAttributes();
+
+            String postType = postConnection.getJsonArray("data").getJsonObject(i).getString("type");
+            obj.setType(postType);
+
+            //String message = postConnection.getJsonArray("data").getJsonObject(i).getString("description");
+            //obj.setMessage(message);
+
+            String owner = postConnection.getJsonArray("data").getJsonObject(i).getString("from");
+            obj.setOwner(owner);
+
+            List<PersonInfo> nameLikes = new ArrayList<PersonInfo>();
+            List<PersonInfo> nameComments = new ArrayList<PersonInfo>();
+            List<PersonInfo> nameTags = new ArrayList<PersonInfo>();
+
+            if (postConnection.getJsonArray("data").getJsonObject(i).has("likes")) {
+
+                JsonArray nameLikesJson = postConnection.getJsonArray("data").getJsonObject(i).getJsonObject("likes").getJsonArray("data");
+                int m = 0;
+
+                for (int n = 0; n < nameLikesJson.length(); n++) {
+                    PersonInfo person = new PersonInfo();
+                    String temp1 = nameLikesJson.getJsonObject(n).getString("name");
+                    String temp2 = nameLikesJson.getJsonObject(n).getString("id");
+                    person.setId(temp2);
+                    person.setName(temp1);
+                    nameLikes.add(person);
+                    m++;
+                }
+
+                obj.setLikes(nameLikes);
+                obj.setNumberOfLikes(m);
+            }
+
+
+            //----------------COMMENTS-------------//
+            if (postConnection.getJsonArray("data").getJsonObject(i).has("comments")) {
+
+                JsonArray nameCommentsJson = postConnection.getJsonArray("data").getJsonObject(i).getJsonObject("comments").getJsonArray("data");
+                int k = 0;
+                for (int c = 0; c < nameCommentsJson.length(); c++) {
+                    JsonObject fromCommentsJson = nameCommentsJson.getJsonObject(c).getJsonObject("from");
+                    String temp3 = fromCommentsJson.getString("name");
+
+                    String temp4 = fromCommentsJson.getString("id");
+                    PersonInfo person = new PersonInfo();
+                    person.setId(temp4);
+                    person.setName(temp3);
+                    nameComments.add(person);
+                    k++;
+                }
+
+                obj.setComments(nameComments);
+                obj.setNumberOfComments(k);
+
+            }
+            //---------TAGS-----------//
+            if (postConnection.getJsonArray("data").getJsonObject(i).has("tags")) {
+
+                JsonArray nameTagsJson = postConnection.getJsonArray("data").getJsonObject(i).getJsonObject("tags").getJsonArray("data");
+                int k = 0;
+                for (int c = 0; c < nameTagsJson.length(); c++) {
+                    String temp5 = nameTagsJson.getJsonObject(c).getString("name");
+                    String temp6 = nameTagsJson.getJsonObject(c).getString("id");
+
+
+                    PersonInfo person = new PersonInfo();
+                    person.setId(temp6);
+                    person.setName(temp5);
+                    nameTags.add(person);
+                    k++;
+                }
+
+                obj.setTags(nameTags);
+                obj.setNumberOfTags(k);
+
+            }
+
+            myPosts.add(obj);
+        }
+
+        object.setPosts(myPosts);
+
+
+        postRepo.save(object);
+
+        return object;
 
     }
 	
