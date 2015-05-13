@@ -1,25 +1,107 @@
 package facebook;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.restfb.DefaultFacebookClient;
 import com.restfb.FacebookClient;
 import com.restfb.Version;
 import com.restfb.json.JsonArray;
 import com.restfb.json.JsonObject;
 import com.restfb.types.User;
+import org.scribe.builder.ServiceBuilder;
+import org.scribe.builder.api.FacebookApi;
+import org.scribe.exceptions.OAuthSignatureException;
+import org.scribe.model.Token;
+import org.scribe.model.Verifier;
+import org.scribe.oauth.OAuthService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.view.RedirectView;
 
-import java.util.ArrayList;
-import java.util.List;
-
+import javax.servlet.http.HttpSession;
+import javax.xml.ws.Response;
+import java.io.IOException;
+import java.util.*;
 
 
 @Controller
 public class HomeController {
 
-    String accessToken = "CAACEdEose0cBAG38rZA8zrQ6P9qYZBaIR5f7KO7PiZCEtR9VxC4Fx5145qEP9Tjuvulp74nrKughPKXs11jU68MFBgjf74qtIZAZBvUqdH1xMyWXWscybSDJqIQfcGQ7LYyPavZAMFIhbF0vuRywI2gzS7Gj5u2b9XWmCO5E04u3AZAp3gQa07KHo40ZAbeEgtDY8BiWYIvbpU6P2I4rHRy4vupNdqXpdg0ZD";
+    //Declaring the Variables
+    private static final Token EMPTY_TOKEN = null;
+    private static final String code = null;
+    public static final String clientId = "*************";
+    public static final String clientSecret = "*******************";
+    public static final String STATE = "state";
+    private String applicationHost = "http://localhost:8080";
 
+    //Scribe Object
+    private OAuthService oAuthService;
+
+    //Creating Facebook Client Object
+    FacebookClient fbClient = new DefaultFacebookClient(Version.VERSION_2_2);
+
+    //Constructor
+    public HomeController() {
+        this.FacebookScribeAuthenticator(clientId, clientSecret, applicationHost);
+    }
+
+    //Initial Login Page
+    @RequestMapping("/login/facebook")
+    public String LoginPage(){
+        return "login";
+    }
+
+    //Scribe Method For AccessTokn
+    public void FacebookScribeAuthenticator (String clientId, String clientSecret, String applicationHost){
+        this.applicationHost = applicationHost;
+        this.oAuthService = buildoAuthService(clientId, clientSecret);
+    }
+
+    //OAuth Builder Service
+    private OAuthService buildoAuthService(String clientId, String clientSecret) {
+        return new ServiceBuilder()
+                .apiKey(clientId)
+                .apiSecret(clientSecret)
+                .scope("user_photos")
+                .scope("user_posts")
+                .callback(applicationHost + "/auth/facebook/callback")
+                .provider(FacebookApi.class)
+                .build();
+    }
+
+    //================================================================
+    //                  API to redirect to Facebook
+    //================================================================
+    @RequestMapping("/auth/facebook")
+    public RedirectView startAuthentication(HttpSession session){
+        String state = UUID.randomUUID().toString();
+        session.setAttribute(STATE,state);
+        String authorizationUrl =oAuthService.getAuthorizationUrl(EMPTY_TOKEN)+"&"+STATE+ "="+state;
+        return new RedirectView(authorizationUrl);
+    }
+
+    //================================================================
+    //               API to handle Callback from Facebook
+    //================================================================
+    @RequestMapping("/auth/facebook/callback")
+    public String callback(@RequestParam("code") String code,@RequestParam(STATE) String state, HttpSession session) throws IOException {
+        Token accessToken = getAccessToken(code);
+        fbClient = new DefaultFacebookClient(accessToken.getToken(), Version.VERSION_2_2);
+        return "logged-in";
+    }
+
+    //Method to take the accessToken provided by Facebook
+    private Token getAccessToken(String code) {
+        Verifier verifier = new Verifier(code);
+        return oAuthService.getAccessToken(Token.empty(), verifier);
+    }
+
+    //================================================================
+    //                      API for Photos
+    //================================================================
 
     @RequestMapping(value = "/{user-id}/photos", method = RequestMethod.GET)
     @ResponseStatus(HttpStatus.OK)
@@ -27,7 +109,6 @@ public class HomeController {
     @ResponseBody
     UserPhotos getPhotos(@PathVariable("user-id") String id) {
 
-        FacebookClient fbClient = new DefaultFacebookClient(accessToken, Version.VERSION_2_2);
         User me;
         me = fbClient.fetchObject(id, com.restfb.types.User.class);
         //PhotoAttributes object = new PhotoAttributes();
@@ -122,4 +203,9 @@ public class HomeController {
 
         return object;
     }
+
+    //================================================================
+    //                      API for Posts
+    //================================================================
+
 }
