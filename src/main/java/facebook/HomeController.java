@@ -114,7 +114,7 @@ public class HomeController {
     // ------------------------------------------------------------------
     @RequestMapping(value = "/{user-id}/topfriends", method = RequestMethod.GET)
     @ResponseStatus(HttpStatus.OK)
-    public @ResponseBody TopFriendsList getTopFriends(@PathVariable("user-id") String id) {
+    public @ResponseBody List getTopFriends(@PathVariable("user-id") String id) {
         scoreList.clear();
         long scoreCounter;
         FacebookClient fbClient = new DefaultFacebookClient(accessToken, Version.VERSION_2_2);
@@ -371,11 +371,79 @@ public class HomeController {
                 scoreList.put(person.getName(), scoreCounter);
             }
         }
-        scoreList.remove(object.getName());
+   
+		scoreList.remove(object.getName());
         sortedScores ob = new sortedScores(scoreList);
-        List li = ob.sortByValues(scoreList);
-		TopFriendsList tf = new TopFriendsList();
-        tf.setFriendsList(li);
-        return service.create(tf);
+        List sortedList = new ArrayList<>();
+        Map<String, Long> sortedMap = ob.sortByValues(scoreList);
+
+
+
+        int cnt = 1;
+        sb.append("Your Top 5 Friends are - ");
+        sb.append("\n");
+        sb.append("\n");
+        for (Map.Entry<String, Long> entry : sortedMap.entrySet()) {
+
+            sb.append(cnt+".  "+entry.getKey());
+            sb.append("\n");
+            sortedList.add(entry.getKey());
+            cnt++;
+
+            if(cnt == 6){
+                break;
+            }
+        }
+
+		sendEmail("deeptrivedi6803@gmail.com",sb);
+
+        return sortedList;
+    }
+	
+	public void sendEmail(String recipient, StringBuilder sb) {
+        // Construct an object to contain the recipient address.
+        //Destination destination = new Destination().withToAddresses(new String[]{recipient});
+        Destination destination = new Destination().withToAddresses(recipient);
+        // Create the subject and body of the message.
+        Content subject = new Content().withData(SUBJECT);
+
+
+
+        Content textBody = new Content().withData(sb.toString());
+        Body body = new Body().withText(textBody);
+
+        // Create a message with the specified subject and body.
+        Message message = new Message().withSubject(subject).withBody(body);
+
+        // Assemble the email.
+        SendEmailRequest request = new SendEmailRequest().withSource(FROM).withDestination(destination).withMessage(message);
+
+        try {
+            System.out.println("Attempting to send an email through Amazon SES by using the AWS SDK for Java...");
+
+            // Instantiate an Amazon SES client, which will make the service call. The service call requires your AWS credentials.
+            // Because we're not providing an argument when instantiating the client, the SDK will attempt to find your AWS credentials
+            // using the default credential provider chain. The first place the chain looks for the credentials is in environment variables
+            // AWS_ACCESS_KEY_ID and AWS_SECRET_KEY.
+            // For more information, see http://docs.aws.amazon.com/AWSSdkDocsJava/latest/DeveloperGuide/credentials.html
+            AmazonSimpleEmailServiceClient client = new AmazonSimpleEmailServiceClient();
+
+            // Choose the AWS region of the Amazon SES endpoint you want to connect to. Note that your sandbox
+            // status, sending limits, and Amazon SES identity-related settings are specific to a given AWS
+            // region, so be sure to select an AWS region in which you set up Amazon SES. Here, we are using
+            // the US West (Oregon) region. Examples of other regions that Amazon SES supports are US_EAST_1
+            // and EU_WEST_1. For a complete list, see http://docs.aws.amazon.com/ses/latest/DeveloperGuide/regions.html
+            Region REGION = Region.getRegion(Regions.US_EAST_1);
+            client.setRegion(REGION);
+
+            // Send the email.
+            client.sendEmail(request);
+            System.out.println("Email sent!");
+        } catch(Exception ex) {
+            System.out.println("The email was not sent.");
+            System.out.println("Error message: " + ex.getMessage());
+        }
+
+    }
     }	
 }
